@@ -1,0 +1,110 @@
+version: '3'
+services:
+
+  #PHP Service
+  service-app:
+    build: ./
+    image: laravel_app2_app
+    container_name: laravel_app2_app
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    depends_on:
+      - service-db
+    volumes:
+      - ./:/var/www
+      - ./DockerConfig/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - app-network
+
+  #Service from Node
+  service-node:
+    build:
+      context: ./
+      dockerfile: DockerfileNode
+    image: laravel_app2_node
+    container_name: laravel_app2_node
+    working_dir: /usr/src/app
+    restart: unless-stopped
+    tty: true
+    volumes:
+      - ./:/usr/src/app:rw
+      - /usr/src/app/app/
+      - /usr/src/app/bootstrap/
+      - /usr/src/app/config/
+      - /usr/src/app/database/
+      - /usr/src/app/DockerConfig/
+      - /usr/src/app/node_modules/
+      - /usr/src/app/resources/views
+      - /usr/src/app/routes/
+      - /usr/src/app/storage/
+      - /usr/src/app/tests/
+      - /usr/src/app/vendor/
+    networks:
+      - app-network
+
+  #Nginx Service
+  service-web:
+    image: nginx
+    container_name: laravel_app2_nginx
+    restart: unless-stopped
+    tty: true
+    depends_on:
+      - service-app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www
+      - ./DockerConfig/nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - app-network
+
+  #MySQL Service
+  service-db:
+    image: mysql:5.7
+    container_name: laravel_app2_dbmysql
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_USER: laraveluser
+      MYSQL_PASSWORD: laravelpass
+      MYSQL_DATABASE: laraveldb
+      MYSQL_ROOT_PASSWORD: root
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./DockerConfig/mysql/my.cnf:/etc/mysql/my.cnf
+    networks:
+      - app-network
+
+  #Phpmyadmin
+  service-phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: laravel_app2_phpmyadmin
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "8080:80"
+    depends_on:
+      - service-db
+    environment:
+      PMA_HOST: service-db
+    networks:
+      - app-network
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
+
+#Volumes
+volumes:
+  dbdata:
+    driver: local

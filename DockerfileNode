@@ -1,0 +1,17 @@
+FROM node:11.6.0-alpine
+
+WORKDIR /usr/src/app
+
+COPY package*.json ./
+
+COPY webpack.mix.js ./
+
+RUN npm install
+
+RUN mkdir -p /usr/src/app/resources
+
+COPY ./resources ./resources
+
+RUN chown -R node:node /usr/src/app
+
+#CMD ["npm","run","watch"]
